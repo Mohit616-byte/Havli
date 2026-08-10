@@ -3,9 +3,34 @@ import { ArrowRight } from "lucide-react";
 import { EVENTS } from "@/lib/mock-data";
 import EventGrid from "@/components/events/EventGrid";
 import SectionHeading from "@/components/ui/SectionHeading";
+import type { PublicEvent } from "@/lib/server/types";
+
+// Map frontend mock Event → PublicEvent shape for EventCard compatibility
+function toPublicEvent(e: (typeof EVENTS)[number]): PublicEvent {
+  return {
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    type: e.type,
+    vibe: [...e.vibe],
+    city: e.city,
+    area: e.area,
+    date: e.date,
+    dateISO: e.dateISO,
+    time: e.time,
+    price: e.price,
+    capacity: e.capacity,
+    spotsLeft: e.spotsLeft,
+    image: e.image,
+    host: { name: e.host.name, verified: e.host.verified },
+    whatToExpect: [...e.whatToExpect],
+    safetyNote: e.safetyNote,
+    createdAt: new Date().toISOString(),
+  };
+}
 
 export default function FeaturedEvents() {
-  const featured = EVENTS.slice(0, 6);
+  const featured = EVENTS.slice(0, 6).map(toPublicEvent);
 
   return (
     <section className="py-20 px-4 sm:px-6 max-w-7xl mx-auto">

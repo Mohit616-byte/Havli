@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, MapPin } from "lucide-react";
+import { Menu, MapPin, User as UserIcon, LogOut } from "lucide-react";
 import MobileNav from "./MobileNav";
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 const NAV_LINKS = [
   { href: "/explore", label: "Explore" },
@@ -17,6 +18,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { user, profile, loading, logout } = useAuth();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 24);
@@ -64,15 +66,49 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Right side */}
+          {/* Right side — Auth aware */}
           <div className="hidden md:flex items-center gap-3">
             <button className="flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors px-3 py-2 rounded-full hover:bg-[var(--color-surface-2)]">
               <MapPin size={14} />
               <span>NCR</span>
             </button>
-            <Button href="/host" variant="primary" size="sm">
-              Host an event
-            </Button>
+
+            {loading ? (
+              <div className="w-20 h-9 bg-[var(--color-surface-2)] rounded-full animate-pulse" />
+            ) : user ? (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/profile"
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                    pathname === "/profile"
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)] text-[var(--color-foreground)]"
+                      : "border-[var(--color-border)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)]"
+                  }`}
+                >
+                  <UserIcon size={14} className="text-[var(--color-primary)]" />
+                  <span>{profile?.name || user.email?.split("@")[0] || "Profile"}</span>
+                </Link>
+                <button
+                  onClick={logout}
+                  title="Log out"
+                  className="p-2 rounded-full text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)] transition-colors"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-foreground)] px-3 py-2 transition-colors"
+                >
+                  Login
+                </Link>
+                <Button href="/signup" variant="primary" size="sm">
+                  Sign up
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Mobile menu button */}

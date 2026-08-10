@@ -11,11 +11,11 @@ import {
   Shield,
   ArrowLeft,
 } from "lucide-react";
-import type { Event } from "@/lib/mock-data";
+import type { PublicEvent } from "@/lib/server/types";
 import Button from "@/components/ui/Button";
 import InterestModal from "@/components/events/InterestModal";
 
-type Props = { event: Event };
+type Props = { event: PublicEvent };
 
 export default function EventDetailClient({ event }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -46,7 +46,6 @@ export default function EventDetailClient({ event }: Props) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Title block */}
               <div>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {event.vibe.map((v) => (
@@ -67,7 +66,6 @@ export default function EventDetailClient({ event }: Props) {
                 </p>
               </div>
 
-              {/* Details grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { icon: Calendar, label: "Date", value: event.date },
@@ -88,7 +86,6 @@ export default function EventDetailClient({ event }: Props) {
                 ))}
               </div>
 
-              {/* Description */}
               <div>
                 <h2 className="text-lg font-bold text-[var(--color-foreground)] mb-3">
                   About this event
@@ -96,22 +93,22 @@ export default function EventDetailClient({ event }: Props) {
                 <p className="text-[var(--color-muted)] leading-relaxed">{event.description}</p>
               </div>
 
-              {/* What to expect */}
-              <div>
-                <h2 className="text-lg font-bold text-[var(--color-foreground)] mb-3">
-                  What to expect
-                </h2>
-                <ul className="space-y-2.5">
-                  {event.whatToExpect.map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-[var(--color-muted)]">
-                      <span className="text-[var(--color-primary)] mt-0.5 shrink-0">●</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {event.whatToExpect.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--color-foreground)] mb-3">
+                    What to expect
+                  </h2>
+                  <ul className="space-y-2.5">
+                    {event.whatToExpect.map((item) => (
+                      <li key={item} className="flex items-start gap-3 text-sm text-[var(--color-muted)]">
+                        <span className="text-[var(--color-primary)] mt-0.5 shrink-0">●</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              {/* Safety */}
               <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5">
                 <h2 className="text-sm font-bold text-[var(--color-foreground)] mb-2 flex items-center gap-2">
                   <Shield size={15} className="text-[var(--color-primary)]" />
@@ -125,7 +122,7 @@ export default function EventDetailClient({ event }: Props) {
               {/* Mobile CTA */}
               <div className="lg:hidden">
                 <Button fullWidth size="lg" onClick={() => setModalOpen(true)}>
-                  I&apos;m Interested — ₹{event.price}
+                  I&apos;m Interested — {event.price === 0 ? "Free" : `₹${event.price}`}
                 </Button>
               </div>
             </div>
@@ -188,6 +185,7 @@ export default function EventDetailClient({ event }: Props) {
       <InterestModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
+        eventId={event.id}
         eventTitle={event.title}
       />
     </>

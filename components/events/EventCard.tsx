@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, Calendar, Clock, Users } from "lucide-react";
-import type { Event } from "@/lib/mock-data";
+import type { PublicEvent } from "@/lib/server/types";
 
 type EventCardProps = {
-  event: Event;
+  event: PublicEvent;
 };
 
 export default function EventCard({ event }: EventCardProps) {
@@ -25,17 +25,14 @@ export default function EventCard({ event }: EventCardProps) {
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           loading="lazy"
         />
-        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-        {/* Price badge */}
         <div className="absolute top-3 left-3">
           <span className="bg-[var(--color-background)]/80 backdrop-blur-sm text-[var(--color-foreground)] text-xs font-bold px-2.5 py-1.5 rounded-full border border-[var(--color-border)]">
             {formattedPrice}
           </span>
         </div>
 
-        {/* Verified badge */}
         {event.host.verified && (
           <div className="absolute top-3 right-3">
             <span className="bg-[var(--color-primary)]/90 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
@@ -45,7 +42,6 @@ export default function EventCard({ event }: EventCardProps) {
           </div>
         )}
 
-        {/* Vibe chips on image bottom */}
         <div className="absolute bottom-3 left-3 flex flex-wrap gap-1">
           {event.vibe.slice(0, 2).map((v) => (
             <span

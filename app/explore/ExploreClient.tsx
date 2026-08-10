@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import FilterBar, { type Filters } from "@/components/explore/FilterBar";
 import EventGrid from "@/components/events/EventGrid";
-import { EVENTS } from "@/lib/mock-data";
+import EventGridSkeleton from "@/components/events/EventGridSkeleton";
+import type { PublicEvent } from "@/lib/server/types";
 
 const initialFilters: Filters = {
   search: "",
@@ -17,31 +18,43 @@ const initialFilters: Filters = {
 export default function ExploreClient() {
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [events, setEvents] = useState<PublicEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Sync URL params on mount
   useEffect(() => {
     const city = searchParams.get("city") ?? "";
     const vibe = searchParams.get("vibe") ?? "";
     setFilters((f) => ({ ...f, city, vibe }));
   }, [searchParams]);
 
-  const filtered = useMemo(() => {
-    return EVENTS.filter((event) => {
-      if (
-        filters.search &&
-        !event.title.toLowerCase().includes(filters.search.toLowerCase()) &&
-        !event.area.toLowerCase().includes(filters.search.toLowerCase()) &&
-        !event.city.toLowerCase().includes(filters.search.toLowerCase()) &&
-        !event.vibe.join(" ").toLowerCase().includes(filters.search.toLowerCase())
-      ) {
-        return false;
-      }
-      if (filters.city && event.city !== filters.city) return false;
-      if (filters.vibe && !event.vibe.includes(filters.vibe)) return false;
-      if (filters.priceMax && event.price > parseInt(filters.priceMax)) return false;
-      if (filters.date && event.dateISO !== filters.date) return false;
-      return true;
-    });
-  }, [filters]);
+  const fetchEvents = useCallback(async (f: Filters) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (f.search) params.set("search", f.search);
+      if (f.city) params.set("city", f.city);
+      if (f.vibe) params.set("vibe", f.vibe);
+      if (f.priceMax) params.set("maxPrice", f.priceMax);
+      if (f.date) params.set("date", f.date);
+
+      const res = await fetch(`/api/events?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to load events");
+      const json = await res.json();
+      setEvents(json.data?.events ?? []);
+    } catch {
+      setError("Could not load events. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Re-fetch whenever filters change
+  useEffect(() => {
+    fetchEvents(filters);
+  }, [filters, fetchEvents]);
 
   return (
     <>
@@ -53,7 +66,7 @@ export default function ExploreClient() {
           Find your next plan
         </h1>
         <p className="mt-2 text-[var(--color-muted)]">
-          {filtered.length} event{filtered.length !== 1 ? "s" : ""} across Delhi NCR
+          {loading ? "Loading events..." : `${events.length} event${events.length !== 1 ? "s" : ""} across Delhi NCR`}
         </p>
       </div>
 
@@ -61,7 +74,23 @@ export default function ExploreClient() {
         <FilterBar filters={filters} onChange={setFilters} />
       </div>
 
-      <EventGrid events={filtered} />
+      {error ? (
+        <div className="text-center py-20">
+          <p className="text-4xl mb-4">⚠️</p>
+          <p className="text-[var(--color-foreground)] font-semibold">Something went wrong</p>
+          <p className="text-[var(--color-muted)] text-sm mt-2">{error}</p>
+          <button
+            onClick={() => fetchEvents(filters)}
+            className="mt-5 text-sm text-[var(--color-primary)] hover:underline font-medium"
+          >
+            Try again
+          </button>
+        </div>
+      ) : loading ? (
+        <EventGridSkeleton count={6} />
+      ) : (
+        <EventGrid events={events} />
+      )}
     </>
   );
 }

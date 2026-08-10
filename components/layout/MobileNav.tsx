@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { X, MapPin } from "lucide-react";
+import { X, MapPin, User as UserIcon, LogOut } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 type MobileNavProps = {
   isOpen: boolean;
@@ -12,10 +13,14 @@ type MobileNavProps = {
 };
 
 export default function MobileNav({ isOpen, onClose, links }: MobileNavProps) {
+  const { user, profile, logout } = useAuth();
+
   useEffect(() => {
     if (!isOpen) return;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen]);
 
   return (
@@ -68,6 +73,17 @@ export default function MobileNav({ isOpen, onClose, links }: MobileNavProps) {
               {link.label}
             </Link>
           ))}
+
+          {user ? (
+            <Link
+              href="/profile"
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold text-[var(--color-foreground)] bg-[var(--color-surface-2)] transition-colors mt-2"
+            >
+              <UserIcon size={18} className="text-[var(--color-primary)]" />
+              <span>{profile?.name || "My Profile"}</span>
+            </Link>
+          ) : null}
         </nav>
 
         {/* Bottom */}
@@ -76,9 +92,28 @@ export default function MobileNav({ isOpen, onClose, links }: MobileNavProps) {
             <MapPin size={14} />
             Delhi NCR
           </button>
-          <Button href="/host" fullWidth>
-            Host an event
-          </Button>
+
+          {user ? (
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => {
+                logout();
+                onClose();
+              }}
+            >
+              <LogOut size={16} className="inline mr-2" /> Log out
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Button href="/login" variant="secondary" fullWidth onClick={onClose}>
+                Login
+              </Button>
+              <Button href="/signup" fullWidth onClick={onClose}>
+                Sign up
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </>

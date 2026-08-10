@@ -1,8 +1,8 @@
 import EventCard from "./EventCard";
-import type { Event } from "@/lib/mock-data";
+import type { PublicEvent } from "@/lib/server/types";
 
 type EventGridProps = {
-  events: Event[];
+  events: PublicEvent[];
   className?: string;
 };
 
@@ -20,9 +20,7 @@ export default function EventGrid({ events, className = "" }: EventGridProps) {
   }
 
   return (
-    <div
-      className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 ${className}`}
-    >
+    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 ${className}`}>
       {events.map((event) => (
         <EventCard key={event.id} event={event} />
       ))}
