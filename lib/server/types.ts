@@ -193,6 +193,8 @@ export interface HostSubmission {
   image?: string;
   status: SubmissionStatus;
   createdAt: string;
+  hostId?: string;
+  userId?: string;
 }
 
 export interface CreateSubmissionInput {
@@ -210,6 +212,8 @@ export interface CreateSubmissionInput {
   vibe: string;
   description: string;
   image?: string;
+  hostId?: string;
+  userId?: string;
 }
 
 // ─── API response shapes ──────────────────────────────────────────────────────

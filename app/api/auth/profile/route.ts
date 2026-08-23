@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const profile = await profileService.getProfile(user.id);
+    const profile = await profileService.getProfile(user.id, user);
     if (!profile) {
       return Response.json(
         { success: false, error: { code: "NOT_FOUND", message: "Profile not found" } },
@@ -42,14 +42,19 @@ export async function PUT(request: NextRequest) {
     const body = await request.json().catch(() => null);
     if (!body) return badRequest("Invalid JSON body");
 
-    const result = await profileService.validateAndUpdate(user.id, body);
+    const result = await profileService.validateAndUpdate(user.id, body, user);
 
     if (!result.ok) {
-      return badRequest(result.message, result.fields);
+      const status = result.status ?? 400;
+      return Response.json(
+        { success: false, error: { code: status === 500 ? "SERVER_ERROR" : "VALIDATION_ERROR", message: result.message, fields: result.fields } },
+        { status }
+      );
     }
 
     return ok({ profile: result.data });
-  } catch {
-    return serverError();
+  } catch (err: any) {
+    console.error("[PUT /api/auth/profile ERROR]", err);
+    return serverError(err?.message || "Failed to save profile. Please try again.");
   }
 }

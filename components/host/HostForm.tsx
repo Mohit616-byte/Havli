@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, LogIn, UserPlus } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
@@ -23,6 +23,7 @@ type FormData = {
   price: string;
   vibe: string;
   description: string;
+  image: string;
 };
 
 const EVENT_TYPES = [
@@ -32,11 +33,11 @@ const EVENT_TYPES = [
 
 const initialForm: FormData = {
   name: "", phone: "", instagram: "", eventTitle: "", eventType: "",
-  city: "", area: "", date: "", time: "", capacity: "", price: "", vibe: "", description: "",
+  city: "", area: "", date: "", time: "", capacity: "", price: "", vibe: "", description: "", image: "",
 };
 
 export default function HostForm() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [form, setForm] = useState<FormData>(initialForm);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -68,9 +69,19 @@ export default function HostForm() {
     setFieldErrors({});
 
     try {
+      const { createBrowserClient } = await import("@/lib/supabase/client");
+      const supabase = createBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
       const res = await fetch("/api/host-submissions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           name: form.name,
           phone: form.phone,
@@ -85,13 +96,16 @@ export default function HostForm() {
           price: Number(form.price) || 0,
           vibe: form.vibe,
           description: form.description,
+          image: form.image || undefined,
         }),
       });
 
       const json = await res.json();
 
       if (!res.ok) {
-        if (json.error?.fields) {
+        if (res.status === 401) {
+          setApiError("Please log in to submit a party.");
+        } else if (json.error?.fields) {
           setFieldErrors(json.error.fields);
           setApiError("Please fix the errors above and try again.");
         } else {
@@ -108,6 +122,30 @@ export default function HostForm() {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="text-center py-12 px-4 space-y-4">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[var(--color-primary-muted)]">
+          <LogIn size={28} className="text-[var(--color-primary)]" />
+        </div>
+        <h2 className="text-2xl font-bold text-[var(--color-foreground)]">
+          Log in to host a party
+        </h2>
+        <p className="text-sm text-[var(--color-muted)] max-w-sm mx-auto leading-relaxed">
+          Any Havli user can host a party! Please log in or create an account to get started.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 max-w-xs mx-auto">
+          <Button href="/login" fullWidth>
+            <LogIn size={16} className="inline mr-2" /> Log in
+          </Button>
+          <Button href="/signup" variant="secondary" fullWidth>
+            <UserPlus size={16} className="inline mr-2" /> Sign up
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="text-center py-16 px-4">
@@ -118,7 +156,7 @@ export default function HostForm() {
           Event submitted 🎉
         </h2>
         <p className="text-[var(--color-muted)] max-w-sm mx-auto leading-relaxed">
-          We&apos;ll review the details and contact you shortly. You&apos;ll hear from us within 24 hours.
+          Your submission is currently <strong className="text-[var(--color-primary)] font-semibold">pending approval</strong>. We&apos;ll review the details and contact you shortly.
         </p>
         <Button
           variant="secondary"
@@ -269,6 +307,14 @@ export default function HostForm() {
             onChange={(e) => update("price", e.target.value)}
             error={fieldErrors.price}
           />
+          <Input
+            id="event-image"
+            label="Party Image URL (optional)"
+            placeholder="https://images.unsplash.com/..."
+            value={form.image}
+            onChange={(e) => update("image", e.target.value)}
+            className="sm:col-span-2"
+          />
           <Textarea
             id="event-description"
             label="Event description"
@@ -287,7 +333,7 @@ export default function HostForm() {
       </Button>
 
       <p className="text-xs text-center text-[var(--color-muted-2)]">
-        By submitting, you agree to Havli&apos;s hosting guidelines. We&apos;ll review and contact you within 24 hours.
+        By submitting, you agree to Havli&apos;s hosting guidelines. Submitted parties remain pending review before appearing on Explore.
       </p>
     </form>
   );

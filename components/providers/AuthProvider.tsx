@@ -60,10 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   const refreshProfile = useCallback(async () => {
-    if (user) {
-      await fetchProfile(user);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const currentUser = session?.user ?? user;
+    if (currentUser) {
+      await fetchProfile(currentUser);
     }
-  }, [user, fetchProfile]);
+  }, [user, supabase, fetchProfile]);
 
   useEffect(() => {
     // Initial session check

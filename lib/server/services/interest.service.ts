@@ -14,7 +14,21 @@ import {
 } from "@/lib/server/validation";
 import type { CreateInterestInput, EventInterest } from "@/lib/server/types";
 
-const AGE_RANGES = ["18-22", "23-27", "28-32", "33-40", "40+"] as const;
+const AGE_RANGES = [
+  "18-22",
+  "23-27",
+  "28-32",
+  "33-40",
+  "40+",
+  "18–20",
+  "21–24",
+  "25–29",
+  "30+",
+  "18–22",
+  "23–27",
+  "28–32",
+  "33–40",
+] as const;
 
 export const interestService = {
   async validateAndCreate(
@@ -82,7 +96,23 @@ export const interestService = {
       reason: body.reason ? String(body.reason) : undefined,
     };
 
-    const record = await interestRepository.create(createInput);
-    return { ok: true, data: record };
+    try {
+      const record = await interestRepository.create(createInput);
+      return { ok: true, data: record };
+    } catch (err: any) {
+      if (
+        err?.message?.includes("duplicate") ||
+        err?.message?.includes("23505") ||
+        err?.message?.includes("event_interests_unique")
+      ) {
+        return {
+          ok: false,
+          status: 409,
+          code: "CONFLICT",
+          message: "You've already expressed interest in this event",
+        };
+      }
+      throw err;
+    }
   },
 };

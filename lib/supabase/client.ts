@@ -9,7 +9,8 @@ const supabaseUrl =
 const rawAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.SUPABASE_ANON_KEY;
-const supabaseAnonKey = rawAnonKey?.trim().replace(/^["']|["']$/g, "") || "";
+const supabaseAnonKey =
+  rawAnonKey?.trim().replace(/^["']|["']$/g, "") || "placeholder-anon-key";
 
 /** Singleton Supabase client for browser usage */
 export const createBrowserClient = () => {

@@ -8,6 +8,7 @@ import type {
   PublicEvent,
   CreateEventInput,
   EventStatus,
+  HostSubmission,
 } from "@/lib/server/types";
 
 export type EventFilters = {
@@ -190,6 +191,84 @@ export const eventRepository = {
       throw new Error(error?.message || "Failed to create event in Supabase");
     }
 
+    return formatPublicEvent(data);
+  },
+
+  /** Fetch all pending events for admin review */
+  async getPendingEvents(): Promise<PublicEvent[]> {
+    const { data, error } = await supabaseAdmin
+      .from("events")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return [];
+    return data.map(formatPublicEvent);
+  },
+
+  /** Create and publish an approved event from an approved host submission */
+  async createFromSubmission(sub: HostSubmission, client?: any): Promise<PublicEvent> {
+    const dbClient = client || supabaseAdmin;
+    const hostId = sub.hostId || sub.userId || null;
+    const payload = {
+      title: sub.eventTitle,
+      event_type: sub.eventType,
+      city: sub.city,
+      area: sub.area,
+      date: sub.date,
+      start_time: sub.startTime,
+      capacity: sub.capacity,
+      spots_left: sub.capacity,
+      price: sub.price,
+      vibe: sub.vibe,
+      description: sub.description,
+      image_url: sub.image || null,
+      status: "approved",
+      host_id: hostId,
+    };
+
+    // 1. Try direct insert with status = 'approved' (succeeds when service role key is present or RLS allows)
+    const { data, error } = await dbClient
+      .from("events")
+      .insert(payload)
+      .select()
+      .maybeSingle();
+
+    if (data) {
+      return formatPublicEvent(data);
+    }
+
+    // 2. Fallback: If RLS policy enforces status='pending' on INSERT when service role key is absent
+    const fallbackPayload = { ...payload, status: "pending" };
+    const { data: pendingData, error: pendingErr } = await dbClient
+      .from("events")
+      .insert(fallbackPayload)
+      .select()
+      .single();
+
+    if (pendingErr || !pendingData) {
+      console.error("[SUPABASE ERROR] createFromSubmission failed:", error?.message || pendingErr?.message);
+      throw new Error(error?.message || pendingErr?.message || "Failed to publish event to database");
+    }
+
+    // Update the pending event to 'approved'
+    const updated = await this.updateStatus(String(pendingData.id), "approved", dbClient);
+    if (updated) return updated;
+
+    return formatPublicEvent(pendingData);
+  },
+
+  /** Update event status (e.g. from 'pending' to 'approved') */
+  async updateStatus(id: string, status: EventStatus, client?: any): Promise<PublicEvent | null> {
+    const dbClient = client || supabaseAdmin;
+    const { data, error } = await dbClient
+      .from("events")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .maybeSingle();
+
+    if (error || !data) return null;
     return formatPublicEvent(data);
   },
 };

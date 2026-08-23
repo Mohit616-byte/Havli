@@ -8,17 +8,19 @@ import MobileNav from "./MobileNav";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/components/providers/AuthProvider";
 
-const NAV_LINKS = [
-  { href: "/explore", label: "Explore" },
-  { href: "/about", label: "How it works" },
-  { href: "/host", label: "Host an event" },
-];
-
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { user, profile, loading, logout } = useAuth();
+
+  const navLinks = user
+    ? [
+        { href: "/explore", label: "Explore" },
+        { href: "/host", label: "Host a Party" },
+        { href: "/profile", label: "Profile" },
+      ]
+    : [{ href: "/explore", label: "Explore" }];
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 24);
@@ -51,7 +53,7 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -122,7 +124,7 @@ export default function Navbar() {
         </div>
       </header>
 
-      <MobileNav isOpen={mobileOpen} onClose={() => setMobileOpen(false)} links={NAV_LINKS} />
+      <MobileNav isOpen={mobileOpen} onClose={() => setMobileOpen(false)} links={navLinks} />
     </>
   );
 }

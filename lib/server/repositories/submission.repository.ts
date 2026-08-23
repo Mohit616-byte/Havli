@@ -11,6 +11,9 @@ import type {
 } from "@/lib/server/types";
 
 function formatSubmission(row: Record<string, unknown>): HostSubmission {
+  const hostId = row.host_id ? String(row.host_id) : row.user_id ? String(row.user_id) : undefined;
+  const userId = row.user_id ? String(row.user_id) : row.host_id ? String(row.host_id) : undefined;
+
   return {
     id: String(row.id || ""),
     name: String(row.name || ""),
@@ -29,13 +32,15 @@ function formatSubmission(row: Record<string, unknown>): HostSubmission {
     image: row.image_url ? String(row.image_url) : undefined,
     status: (row.status as SubmissionStatus) || "pending",
     createdAt: String(row.created_at || new Date().toISOString()),
+    hostId,
+    userId,
   };
 }
 
 export const submissionRepository = {
   /** Create a new host submission in Supabase — status ALWAYS forced to 'pending' */
   async create(input: CreateSubmissionInput): Promise<HostSubmission> {
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: input.name,
       phone: input.phone,
       instagram: input.instagram || null,
@@ -57,12 +62,7 @@ export const submissionRepository = {
     const { error } = await supabase.from("host_submissions").insert(payload);
 
     if (error) {
-      console.error("[SUPABASE ERROR] host_submissions insert failed:", {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-      });
+      console.error("[SUPABASE ERROR] host_submissions insert failed:", error);
       throw new Error(`Supabase Insert Failed: ${error.message}`);
     }
 
@@ -72,6 +72,18 @@ export const submissionRepository = {
       status: "pending",
       createdAt: new Date().toISOString(),
     };
+  },
+
+  /** Get pending submissions from Supabase for admin review */
+  async getPending(): Promise<HostSubmission[]> {
+    const { data, error } = await supabaseAdmin
+      .from("host_submissions")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return [];
+    return data.map(formatSubmission);
   },
 
   /** Get all submissions from Supabase */
@@ -104,7 +116,7 @@ export const submissionRepository = {
   ): Promise<HostSubmission | null> {
     const { data, error } = await supabaseAdmin
       .from("host_submissions")
-      .update({ status })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
       .maybeSingle();

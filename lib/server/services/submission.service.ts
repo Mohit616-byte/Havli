@@ -19,7 +19,8 @@ import type { CreateSubmissionInput, HostSubmission } from "@/lib/server/types";
 
 export const submissionService = {
   async validateAndCreate(
-    input: unknown
+    input: unknown,
+    userId?: string
   ): Promise<
     | { ok: true; data: { submissionId: string; message: string } }
     | { ok: false; status: number; code: string; message: string; fields?: Record<string, string> }
@@ -66,6 +67,8 @@ export const submissionService = {
       vibe: String(body.vibe),
       description: String(body.description),
       image: body.image ? String(body.image) : undefined,
+      userId: userId,
+      hostId: userId,
     };
 
     const submission: HostSubmission = await submissionRepository.create(

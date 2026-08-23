@@ -20,13 +20,14 @@ const AGE_RANGES = [
 ] as const;
 
 export const profileService = {
-  async getProfile(userId: string): Promise<UserProfile | null> {
-    return await profileRepository.getById(userId);
+  async getProfile(userId: string, authUser?: any): Promise<UserProfile | null> {
+    return await profileRepository.getById(userId, authUser);
   },
 
   async validateAndUpdate(
     userId: string,
-    input: unknown
+    input: unknown,
+    authUser?: any
   ): Promise<
     | { ok: true; data: UserProfile }
     | { ok: false; status: number; message: string; fields?: Record<string, string> }
@@ -60,14 +61,22 @@ export const profileService = {
       city: body.city !== undefined ? String(body.city) : undefined,
       area: body.area !== undefined ? String(body.area) : undefined,
       ageRange: body.ageRange !== undefined ? String(body.ageRange) : undefined,
-      instagram: body.instagram !== undefined ? String(body.instagram) : undefined,
       avatarUrl: body.avatarUrl !== undefined ? String(body.avatarUrl) : undefined,
       interests: Array.isArray(body.interests)
         ? (body.interests as string[]).map(String)
         : undefined,
     };
 
-    const updated = await profileRepository.update(userId, updateInput);
-    return { ok: true, data: updated };
+    try {
+      const updated = await profileRepository.update(userId, updateInput, authUser);
+      return { ok: true, data: updated };
+    } catch (err: any) {
+      console.error("[PROFILE SERVICE ERROR]", err);
+      return {
+        ok: false,
+        status: 500,
+        message: err?.message || "Failed to save profile. Please try again.",
+      };
+    }
   },
 };

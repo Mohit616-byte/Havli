@@ -50,11 +50,11 @@ export function methodNotAllowed(): Response {
   return Response.json(body, { status: 405 });
 }
 
-/** 500 Internal Server Error — never exposes internals */
-export function serverError(): Response {
+/** 500 Internal Server Error */
+export function serverError(message = "Something went wrong. Please try again."): Response {
   const body: ApiError = {
     success: false,
-    error: { code: "SERVER_ERROR", message: "Something went wrong. Please try again." },
+    error: { code: "SERVER_ERROR", message },
   };
   return Response.json(body, { status: 500 });
 }

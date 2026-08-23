@@ -34,11 +34,17 @@ export default function SignupPage() {
     }
 
     try {
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_BASE_URL || "https://havli.vercel.app";
+
       const supabase = createBrowserClient();
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${origin}/auth/confirm`,
           data: {
             name, // Pass name in metadata for handle_new_user DB trigger
           },
@@ -59,7 +65,19 @@ export default function SignupPage() {
         router.push("/onboarding");
         router.refresh();
       } else {
-        router.push("/login?message=Account created successfully. Please log in.");
+        // Guarantee immediate session if Supabase auto-login did not auto-populate session
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) {
+          setError(signInError.message);
+          return;
+        }
+
+        router.push("/onboarding");
+        router.refresh();
       }
     } catch {
       setError("Something went wrong. Please try again.");

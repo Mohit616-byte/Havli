@@ -36,7 +36,7 @@ export default function OnboardingPage() {
       if (!user) {
         router.push("/login");
       } else if (profile && isProfileComplete(profile)) {
-        router.push("/");
+        router.push("/explore");
       }
     }
   }, [user, profile, loading, router]);
@@ -102,22 +102,34 @@ export default function OnboardingPage() {
     try {
       const { createBrowserClient } = await import("@/lib/supabase/client");
       const supabase = createBrowserClient();
+
+      // Refresh session to ensure we have a fresh, valid token
+      await supabase.auth.refreshSession();
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      const token = session?.access_token || "";
 
-      const payload = {
+      if (!session?.access_token) {
+        setError("Session expired. Please log in again.");
+        setSaving(false);
+        return;
+      }
+
+      const token = session.access_token;
+
+      const payload: Record<string, unknown> = {
         name: name.trim(),
         ageRange,
         city,
         area: area.trim(),
         interests: selectedVibes,
-        gender: !skipOptional && gender ? gender : undefined,
-        phone: !skipOptional && phone ? phone.trim() : undefined,
-        instagram: !skipOptional && instagram ? instagram.trim() : undefined,
-        avatarUrl: !skipOptional && avatarUrl ? avatarUrl.trim() : undefined,
       };
+
+      if (!skipOptional) {
+        if (gender) payload.gender = gender;
+        if (phone.trim()) payload.phone = phone.trim();
+        if (avatarUrl.trim()) payload.avatarUrl = avatarUrl.trim();
+      }
 
       const res = await fetch("/api/auth/profile", {
         method: "PUT",
@@ -128,17 +140,27 @@ export default function OnboardingPage() {
         body: JSON.stringify(payload),
       });
 
-      const json = await res.json();
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch {
+        setError("Server error: invalid response. Please try again.");
+        setSaving(false);
+        return;
+      }
+
       if (!res.ok) {
-        setError(json.error?.message || "Failed to save profile. Please try again.");
+        console.error("[ONBOARDING API ERROR]", json);
+        setError(json?.error?.message || "Failed to save profile. Please try again.");
         setSaving(false);
         return;
       }
 
       await refreshProfile();
-      router.push("/");
+      router.push("/explore");
       router.refresh();
-    } catch {
+    } catch (err) {
+      console.error("[ONBOARDING SUBMIT ERROR]", err);
       setError("Network error. Please try again.");
       setSaving(false);
     }
@@ -185,7 +207,7 @@ export default function OnboardingPage() {
           <div className="space-y-5 animate-in fade-in duration-300">
             <div>
               <h1 className="text-2xl font-bold text-[var(--color-foreground)]">
-                Tell us about yourself
+                Complete your Havli profile
               </h1>
               <p className="text-sm text-[var(--color-muted)] mt-1">
                 Help hosts and guests get to know you.
