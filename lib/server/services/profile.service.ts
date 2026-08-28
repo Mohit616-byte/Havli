@@ -27,7 +27,8 @@ export const profileService = {
   async validateAndUpdate(
     userId: string,
     input: unknown,
-    authUser?: any
+    authUser?: any,
+    authToken?: string
   ): Promise<
     | { ok: true; data: UserProfile }
     | { ok: false; status: number; message: string; fields?: Record<string, string> }
@@ -68,7 +69,7 @@ export const profileService = {
     };
 
     try {
-      const updated = await profileRepository.update(userId, updateInput, authUser);
+      const updated = await profileRepository.update(userId, updateInput, authUser, authToken);
       return { ok: true, data: updated };
     } catch (err: any) {
       console.error("[PROFILE SERVICE ERROR]", err);

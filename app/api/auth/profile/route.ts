@@ -31,6 +31,10 @@ export async function GET(request: NextRequest) {
 /** PUT /api/auth/profile — update authenticated user profile */
 export async function PUT(request: NextRequest) {
   try {
+    // Extract JWT token from Authorization header (needed for user-context DB client)
+    const authHeader = request.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+
     const user = await getAuthUser(request);
     if (!user) {
       return Response.json(
@@ -42,7 +46,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json().catch(() => null);
     if (!body) return badRequest("Invalid JSON body");
 
-    const result = await profileService.validateAndUpdate(user.id, body, user);
+    const result = await profileService.validateAndUpdate(user.id, body, user, token);
 
     if (!result.ok) {
       const status = result.status ?? 400;
