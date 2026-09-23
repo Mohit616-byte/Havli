@@ -3,7 +3,7 @@
  * Queries and updates the 'profiles' PostgreSQL database table.
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type User } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/server/supabase";
 import type {
   UserProfile,
@@ -30,11 +30,6 @@ function getUserClient(token: string) {
 }
 
 function formatProfile(row: Record<string, unknown>): UserProfile {
-  let interestsArray: string[] = [];
-  if (Array.isArray(row.interests)) {
-    interestsArray = row.interests.map(String);
-  }
-
   return {
     id: String(row.id),
     name: String(row.name || ""),
@@ -46,7 +41,9 @@ function formatProfile(row: Record<string, unknown>): UserProfile {
     ageRange: row.age_range ? String(row.age_range) : undefined,
     instagram: row.instagram ? String(row.instagram) : undefined,
     avatarUrl: row.avatar_url ? String(row.avatar_url) : undefined,
-    interests: interestsArray,
+    interests: Array.isArray(row.interests)
+      ? (row.interests as string[]).map(String)
+      : [],
     role: (row.role as UserRole) || "user",
     createdAt: String(row.created_at || new Date().toISOString()),
     updatedAt: String(row.updated_at || new Date().toISOString()),
@@ -55,7 +52,7 @@ function formatProfile(row: Record<string, unknown>): UserProfile {
 
 export const profileRepository = {
   /** Fetch user profile by user ID with automatic fallback profile creation */
-  async getById(userId: string, authUser?: any): Promise<UserProfile | null> {
+  async getById(userId: string, authUser?: User | null): Promise<UserProfile | null> {
     const { data } = await supabaseAdmin
       .from("profiles")
       .select("*")
@@ -66,7 +63,7 @@ export const profileRepository = {
 
     // Auto-recovery: If profile row is missing, try to backfill from auth user via admin API
     try {
-      let u = authUser;
+      let u: User | null | undefined = authUser;
       if (!u) {
         const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(userId);
         u = authUserData?.user;
@@ -106,7 +103,7 @@ export const profileRepository = {
   async update(
     userId: string,
     input: UpdateProfileInput,
-    authUser?: any,
+    authUser?: User | null,
     authToken?: string
   ): Promise<UserProfile> {
     const current = await this.getById(userId, authUser);

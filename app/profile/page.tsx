@@ -27,19 +27,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, profile, loading, refreshProfile, logout } = useAuth();
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [gender, setGender] = useState("");
-  const [city, setCity] = useState("");
-  const [area, setArea] = useState("");
-  const [ageRange, setAgeRange] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   // Redirect if not logged in
   useEffect(() => {
     if (!loading && !user) {
@@ -47,20 +34,50 @@ export default function ProfilePage() {
     }
   }, [user, loading, router]);
 
-  // Populate form from profile data
-  useEffect(() => {
-    if (profile) {
-      setName(profile.name || "");
-      setPhone(profile.phone || "");
-      setGender(profile.gender || "");
-      setCity(profile.city || "");
-      setArea(profile.area || "");
-      setAgeRange(profile.ageRange || "");
-      setInstagram(profile.instagram || "");
-      setSelectedVibes(profile.interests || []);
-      setAvatarUrl(profile.avatarUrl || "");
-    }
-  }, [profile]);
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen pt-28 pb-16 px-4 max-w-3xl mx-auto flex items-center justify-center">
+        <div className="animate-pulse space-y-4 w-full">
+          <div className="h-8 bg-[var(--color-surface-2)] rounded w-1/3" />
+          <div className="h-64 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ProfileForm
+      user={user}
+      profile={profile}
+      refreshProfile={refreshProfile}
+      logout={logout}
+    />
+  );
+}
+
+function ProfileForm({
+  user,
+  profile,
+  refreshProfile,
+  logout,
+}: {
+  user: { email?: string };
+  profile: ReturnType<typeof useAuth>["profile"];
+  refreshProfile: () => Promise<void>;
+  logout: () => Promise<void>;
+}) {
+  const [name, setName] = useState(profile?.name || "");
+  const [phone, setPhone] = useState(profile?.phone || "");
+  const [gender, setGender] = useState(profile?.gender || "");
+  const [city, setCity] = useState(profile?.city || "");
+  const [area, setArea] = useState(profile?.area || "");
+  const [ageRange, setAgeRange] = useState(profile?.ageRange || "");
+  const [instagram, setInstagram] = useState(profile?.instagram || "");
+  const [selectedVibes, setSelectedVibes] = useState<string[]>(profile?.interests || []);
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl || "");
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const toggleVibe = (vibeLabel: string) => {
     setSelectedVibes((prev) =>
@@ -118,17 +135,6 @@ export default function ProfilePage() {
       setSaving(false);
     }
   };
-
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen pt-28 pb-16 px-4 max-w-3xl mx-auto flex items-center justify-center">
-        <div className="animate-pulse space-y-4 w-full">
-          <div className="h-8 bg-[var(--color-surface-2)] rounded w-1/3" />
-          <div className="h-64 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 max-w-3xl mx-auto">

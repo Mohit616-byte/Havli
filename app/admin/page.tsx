@@ -53,7 +53,12 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    fetchPending();
+    let active = true;
+    (async () => {
+      if (!active) return;
+      await fetchPending();
+    })();
+    return () => { active = false; };
   }, [fetchPending]);
 
   const handleUpdateStatus = async (id: string, status: "approved" | "rejected") => {
@@ -156,6 +161,7 @@ export default function AdminPage() {
                 >
                   {/* Image preview */}
                   {sub.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={sub.image}
                       alt={sub.eventTitle}

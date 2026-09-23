@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { CheckCircle, LogIn, UserPlus } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
@@ -50,23 +49,17 @@ export default function InterestModal({
   eventTitle,
 }: InterestModalProps) {
   const { user, profile } = useAuth();
-  const [form, setForm] = useState<FormData>(initialForm);
+  const [form, setForm] = useState<FormData>(() => ({
+    ...initialForm,
+    name: profile?.name || "",
+    phone: profile?.phone || "",
+    cityArea: profile?.area && profile?.city ? `${profile.area}, ${profile.city}` : profile?.city || "",
+    ageRange: profile?.ageRange || "",
+  }));
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Pre-fill form from user profile if available
-  useEffect(() => {
-    if (profile) {
-      setForm((prev) => ({
-        ...prev,
-        name: prev.name || profile.name || "",
-        phone: prev.phone || profile.phone || "",
-        cityArea: prev.cityArea || (profile.area && profile.city ? `${profile.area}, ${profile.city}` : profile.city || ""),
-        ageRange: prev.ageRange || profile.ageRange || "",
-      }));
-    }
-  }, [profile]);
 
   const update = (key: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));

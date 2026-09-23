@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     }
 
     return created(result.data);
-  } catch (err: any) {
-    console.error("[SERVER API ERROR] POST /api/host-submissions:", err?.message || err);
+  } catch (err: unknown) {
+    console.error("[SERVER API ERROR] POST /api/host-submissions:", err);
     return serverError();
   }
 }

@@ -17,19 +17,6 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { user, profile, loading, refreshProfile } = useAuth();
 
-  const [step, setStep] = useState(1);
-  const [name, setName] = useState("");
-  const [ageRange, setAgeRange] = useState("");
-  const [gender, setGender] = useState("");
-  const [city, setCity] = useState("");
-  const [area, setArea] = useState("");
-  const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
-  const [phone, setPhone] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   // Redirect unauthenticated users or users with complete profile
   useEffect(() => {
     if (!loading) {
@@ -41,20 +28,45 @@ export default function OnboardingPage() {
     }
   }, [user, profile, loading, router]);
 
-  // Pre-fill existing data
-  useEffect(() => {
-    if (profile) {
-      if (profile.name) setName(profile.name);
-      if (profile.ageRange) setAgeRange(profile.ageRange);
-      if (profile.gender) setGender(profile.gender);
-      if (profile.city) setCity(profile.city);
-      if (profile.area) setArea(profile.area);
-      if (profile.interests) setSelectedVibes(profile.interests);
-      if (profile.phone) setPhone(profile.phone);
-      if (profile.instagram) setInstagram(profile.instagram);
-      if (profile.avatarUrl) setAvatarUrl(profile.avatarUrl);
-    }
-  }, [profile]);
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen pt-28 pb-16 px-4 max-w-lg mx-auto flex items-center justify-center">
+        <div className="animate-pulse space-y-4 w-full">
+          <div className="h-8 bg-[var(--color-surface-2)] rounded w-1/3 mx-auto" />
+          <div className="h-64 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <OnboardingWizard
+      profile={profile}
+      refreshProfile={refreshProfile}
+    />
+  );
+}
+
+function OnboardingWizard({
+  profile,
+  refreshProfile,
+}: {
+  profile: ReturnType<typeof useAuth>["profile"];
+  refreshProfile: () => Promise<void>;
+}) {
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [name, setName] = useState(profile?.name || "");
+  const [ageRange, setAgeRange] = useState(profile?.ageRange || "");
+  const [gender, setGender] = useState(profile?.gender || "");
+  const [city, setCity] = useState(profile?.city || "");
+  const [area, setArea] = useState(profile?.area || "");
+  const [selectedVibes, setSelectedVibes] = useState<string[]>(profile?.interests || []);
+  const [phone, setPhone] = useState(profile?.phone || "");
+  const [instagram, setInstagram] = useState(profile?.instagram || "");
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const toggleVibe = (vibeLabel: string) => {
     setSelectedVibes((prev) =>
@@ -140,7 +152,7 @@ export default function OnboardingPage() {
         body: JSON.stringify(payload),
       });
 
-      let json: any = null;
+      let json: { error?: { message?: string } } | null = null;
       try {
         json = await res.json();
       } catch {
@@ -165,17 +177,6 @@ export default function OnboardingPage() {
       setSaving(false);
     }
   };
-
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen pt-28 pb-16 px-4 max-w-lg mx-auto flex items-center justify-center">
-        <div className="animate-pulse space-y-4 w-full">
-          <div className="h-6 bg-[var(--color-surface-2)] rounded w-1/3 mx-auto" />
-          <div className="h-80 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 flex items-center justify-center">

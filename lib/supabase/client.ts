@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const rawUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -12,13 +12,18 @@ const rawAnonKey =
 const supabaseAnonKey =
   rawAnonKey?.trim().replace(/^["']|["']$/g, "") || "placeholder-anon-key";
 
+let browserClient: SupabaseClient | null = null;
+
 /** Singleton Supabase client for browser usage */
-export const createBrowserClient = () => {
-  return createClient(supabaseUrl, supabaseAnonKey, {
+export const createBrowserClient = (): SupabaseClient => {
+  if (browserClient) return browserClient;
+  browserClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
   });
+  return browserClient;
 };
+

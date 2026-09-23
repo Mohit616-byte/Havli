@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { eventService } from "@/lib/server/services/event.service";
+import { eventService }   from "@/lib/server/services/event.service";
+import { bookingService } from "@/lib/server/services/booking.service";
 import type { PublicEvent } from "@/lib/server/types";
 import EventDetailClient from "./EventDetailClient";
+
+// Force dynamic so seat counts are always fresh
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -24,18 +28,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export async function generateStaticParams() {
-  try {
-    const events = await eventService.listEvents({});
-    return events.map((e) => ({ id: e.id }));
-  } catch {
-    return [];
-  }
-}
-
 export default async function EventDetailPage({ params }: Props) {
   const { id } = await params;
   const event = await getEventData(id);
   if (!event) notFound();
-  return <EventDetailClient event={event} />;
+
+  // Compute live available spots from real booking count (not events.spots_left)
+  const spotsLeft = await bookingService.getAvailableSpots(event.id, event.capacity);
+
+  return <EventDetailClient event={{ ...event, spotsLeft }} />;
 }
+

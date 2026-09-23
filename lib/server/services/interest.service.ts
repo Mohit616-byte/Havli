@@ -99,11 +99,12 @@ export const interestService = {
     try {
       const record = await interestRepository.create(createInput);
       return { ok: true, data: record };
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err || "");
       if (
-        err?.message?.includes("duplicate") ||
-        err?.message?.includes("23505") ||
-        err?.message?.includes("event_interests_unique")
+        msg.includes("duplicate") ||
+        msg.includes("23505") ||
+        msg.includes("event_interests_unique")
       ) {
         return {
           ok: false,

@@ -1,11 +1,8 @@
-/**
- * ProfileService — business logic for user profile management.
- */
-
 import { profileRepository } from "@/lib/server/repositories/profile.repository";
-import { check, minLength, isPhone, isAllowedValue } from "@/lib/server/validation";
+import { check, minLength, isPhone, isAllowedValue, type Rule } from "@/lib/server/validation";
 import { ALLOWED_CITIES, ALLOWED_GENDERS } from "@/lib/server/types";
 import type { UserProfile, UpdateProfileInput } from "@/lib/server/types";
+import type { User } from "@supabase/supabase-js";
 
 const AGE_RANGES = [
   "18–20",
@@ -20,14 +17,14 @@ const AGE_RANGES = [
 ] as const;
 
 export const profileService = {
-  async getProfile(userId: string, authUser?: any): Promise<UserProfile | null> {
+  async getProfile(userId: string, authUser?: User | null): Promise<UserProfile | null> {
     return await profileRepository.getById(userId, authUser);
   },
 
   async validateAndUpdate(
     userId: string,
     input: unknown,
-    authUser?: any,
+    authUser?: User | null,
     authToken?: string
   ): Promise<
     | { ok: true; data: UserProfile }
@@ -35,7 +32,7 @@ export const profileService = {
   > {
     const body = input as Record<string, unknown>;
 
-    const rules: Record<string, any[]> = {};
+    const rules: Record<string, Rule[]> = {};
     if (body.name !== undefined) rules.name = [minLength("Name", 2)];
     if (body.phone && String(body.phone).trim()) rules.phone = [isPhone("Phone")];
     if (body.city && String(body.city).trim())
@@ -71,12 +68,13 @@ export const profileService = {
     try {
       const updated = await profileRepository.update(userId, updateInput, authUser, authToken);
       return { ok: true, data: updated };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[PROFILE SERVICE ERROR]", err);
+      const msg = err instanceof Error ? err.message : "Failed to save profile. Please try again.";
       return {
         ok: false,
         status: 500,
-        message: err?.message || "Failed to save profile. Please try again.",
+        message: msg,
       };
     }
   },

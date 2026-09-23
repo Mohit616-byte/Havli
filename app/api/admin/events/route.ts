@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
 
     const pendingSubmissions = await submissionRepository.getPending();
     return ok({ submissions: pendingSubmissions, events: pendingSubmissions });
-  } catch (err: any) {
-    console.error("[SERVER API ERROR] GET /api/admin/events:", err?.message || err);
+  } catch (err: unknown) {
+    console.error("[SERVER API ERROR] GET /api/admin/events:", err);
     return serverError();
   }
 }
@@ -96,8 +96,8 @@ export async function PATCH(request: NextRequest) {
         message: "Host submission rejected.",
       });
     }
-  } catch (err: any) {
-    console.error("[SERVER API ERROR] PATCH /api/admin/events:", err?.message || err);
+  } catch (err: unknown) {
+    console.error("[SERVER API ERROR] PATCH /api/admin/events:", err);
     return serverError();
   }
 }

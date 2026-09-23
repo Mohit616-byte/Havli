@@ -145,6 +145,43 @@ export interface CreateEventInput {
   whatToExpect?: string[];
 }
 
+// ─── Booking ──────────────────────────────────────────────────────────────────
+
+export type BookingStatus  = "confirmed" | "cancelled" | "refunded";
+export type PaymentStatus  = "test_paid" | "pending"   | "failed" | "refunded";
+
+export interface Booking {
+  id:            string;
+  eventId:       string;
+  userId:        string;
+  amount:        number;
+  status:        BookingStatus;
+  paymentStatus: PaymentStatus;
+  createdAt:     string;
+  updatedAt:     string;
+}
+
+/** Booking with joined event snapshot fields — used for My Bookings page */
+export interface BookingWithEvent extends Booking {
+  eventTitle:    string;
+  eventDate:     string;   // formatted display date
+  eventDateISO:  string;
+  eventTime:     string;
+  eventCity:     string;
+  eventArea:     string;
+  eventImage:    string;
+  eventPrice:    number;
+}
+
+/** Minimal guest info shown to a host — no private fields */
+export interface GuestEntry {
+  bookingId:  string;
+  name:       string;
+  ageRange?:  string;
+  status:     BookingStatus;
+  bookedAt:   string;
+}
+
 // ─── Interest ─────────────────────────────────────────────────────────────────
 
 export interface EventInterest {

@@ -6,6 +6,8 @@ import {
   useEffect,
   useState,
   useCallback,
+  useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -32,91 +34,114 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [supabase] = useState(() => createBrowserClient());
+  const supabase = useMemo(() => createBrowserClient(), []);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (sessionUser: User) => {
+  const activeUserIdRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
+
+  const fetchProfile = useCallback(
+    async (token: string, force = false) => {
+      if (!token) return;
+      if (isFetchingRef.current && !force) return;
+
+      isFetchingRef.current = true;
+      try {
+        const res = await fetch("/api/auth/profile", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          setProfile(json.data?.profile ?? null);
+        }
+      } catch (err) {
+        console.error("[AUTH PROVIDER] Failed to fetch profile:", err);
+      } finally {
+        isFetchingRef.current = false;
+      }
+    },
+    []
+  );
+
+  const refreshProfile = useCallback(async () => {
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      const token = session?.access_token || "";
-
-      const res = await fetch("/api/auth/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        setProfile(json.data?.profile ?? null);
+      if (session?.access_token) {
+        await fetchProfile(session.access_token, true);
       }
-    } catch {
-      setProfile((prev) => prev);
+    } catch (err) {
+      console.error("[AUTH PROVIDER] Refresh profile failed:", err);
     }
-  }, [supabase]);
-
-  const refreshProfile = useCallback(async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const currentUser = session?.user ?? user;
-    if (currentUser) {
-      await fetchProfile(currentUser);
-    }
-  }, [user, supabase, fetchProfile]);
+  }, [supabase, fetchProfile]);
 
   useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        fetchProfile(currentUser).finally(() => setLoading(false));
+    let mounted = true;
+
+    // Single auth state subscription handles initial session and all changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      const sessionUser = session?.user ?? null;
+      const sessionToken = session?.access_token ?? "";
+
+      setUser(sessionUser);
+
+      if (sessionUser && sessionToken) {
+        // Only fetch if user changed or profile not loaded yet
+        if (activeUserIdRef.current !== sessionUser.id) {
+          activeUserIdRef.current = sessionUser.id;
+          await fetchProfile(sessionToken, false);
+        }
       } else {
+        activeUserIdRef.current = null;
+        setProfile(null);
+      }
+
+      if (mounted) {
         setLoading(false);
       }
     });
 
-    // Listen to auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchProfile(currentUser);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setLoading(true);
+    activeUserIdRef.current = null;
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
     setLoading(false);
-  };
+  }, [supabase]);
 
-  const isComplete = isProfileComplete(profile);
+  const isComplete = useMemo(() => isProfileComplete(profile), [profile]);
 
-  return (
-    <AuthContext.Provider
-      value={{ user, profile, isComplete, loading, logout, refreshProfile }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      profile,
+      isComplete,
+      loading,
+      logout,
+      refreshProfile,
+    }),
+    [user, profile, isComplete, loading, logout, refreshProfile]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);
+

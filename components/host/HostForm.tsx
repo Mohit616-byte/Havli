@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CheckCircle, LogIn, UserPlus } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -38,23 +38,17 @@ const initialForm: FormData = {
 
 export default function HostForm() {
   const { user, profile } = useAuth();
-  const [form, setForm] = useState<FormData>(initialForm);
+  const [form, setForm] = useState<FormData>(() => ({
+    ...initialForm,
+    name: profile?.name || "",
+    phone: profile?.phone || "",
+    city: profile?.city || "",
+    area: profile?.area || "",
+  }));
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (profile) {
-      setForm((prev) => ({
-        ...prev,
-        name: prev.name || profile.name || "",
-        phone: prev.phone || profile.phone || "",
-        city: prev.city || profile.city || "",
-        area: prev.area || profile.area || "",
-      }));
-    }
-  }, [profile]);
 
   const update = (key: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));

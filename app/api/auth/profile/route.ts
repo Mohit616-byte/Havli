@@ -57,8 +57,9 @@ export async function PUT(request: NextRequest) {
     }
 
     return ok({ profile: result.data });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[PUT /api/auth/profile ERROR]", err);
-    return serverError(err?.message || "Failed to save profile. Please try again.");
+    const msg = err instanceof Error ? err.message : "Failed to save profile. Please try again.";
+    return serverError(msg);
   }
 }

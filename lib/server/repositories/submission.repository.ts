@@ -56,6 +56,9 @@ export const submissionRepository = {
       description: input.description,
       image_url: input.image || null,
       status: "pending", // ALWAYS forced to pending
+      // Persist submitter identity so events.host_id is correctly set on approval
+      user_id: input.userId || input.hostId || null,
+      host_id: input.hostId || input.userId || null,
     };
 
     // Execute pure INSERT without .select() to respect INSERT-only RLS policy

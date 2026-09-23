@@ -16,9 +16,13 @@ export default function Navbar() {
 
   const navLinks = user
     ? [
-        { href: "/explore", label: "Explore" },
-        { href: "/host", label: "Host a Party" },
-        { href: "/profile", label: "Profile" },
+        { href: "/explore",         label: "Explore" },
+        { href: "/host",            label: "Host a Party" },
+        { href: "/bookings",        label: "My Bookings" },
+        ...(profile?.role === "host" || profile?.role === "admin"
+          ? [{ href: "/host/dashboard", label: "Dashboard" }]
+          : []),
+        { href: "/profile",         label: "Profile" },
       ]
     : [{ href: "/explore", label: "Explore" }];
 
@@ -27,10 +31,6 @@ export default function Navbar() {
     window.addEventListener("scroll", handler, { passive: true });
     return () => window.removeEventListener("scroll", handler);
   }, []);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   return (
     <>

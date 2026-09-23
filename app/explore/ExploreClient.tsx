@@ -17,17 +17,14 @@ const initialFilters: Filters = {
 
 export default function ExploreClient() {
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...initialFilters,
+    city: searchParams.get("city") ?? "",
+    vibe: searchParams.get("vibe") ?? "",
+  }));
   const [events, setEvents] = useState<PublicEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Sync URL params on mount
-  useEffect(() => {
-    const city = searchParams.get("city") ?? "";
-    const vibe = searchParams.get("vibe") ?? "";
-    setFilters((f) => ({ ...f, city, vibe }));
-  }, [searchParams]);
 
   const fetchEvents = useCallback(async (f: Filters) => {
     setLoading(true);
@@ -53,7 +50,12 @@ export default function ExploreClient() {
 
   // Re-fetch whenever filters change
   useEffect(() => {
-    fetchEvents(filters);
+    let active = true;
+    (async () => {
+      if (!active) return;
+      await fetchEvents(filters);
+    })();
+    return () => { active = false; };
   }, [filters, fetchEvents]);
 
   return (

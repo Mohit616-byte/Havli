@@ -4,6 +4,7 @@
  */
 
 import { supabase, supabaseAdmin } from "@/lib/server/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   PublicEvent,
   CreateEventInput,
@@ -207,7 +208,7 @@ export const eventRepository = {
   },
 
   /** Create and publish an approved event from an approved host submission */
-  async createFromSubmission(sub: HostSubmission, client?: any): Promise<PublicEvent> {
+  async createFromSubmission(sub: HostSubmission, client?: SupabaseClient): Promise<PublicEvent> {
     const dbClient = client || supabaseAdmin;
     const hostId = sub.hostId || sub.userId || null;
     const payload = {
@@ -259,7 +260,7 @@ export const eventRepository = {
   },
 
   /** Update event status (e.g. from 'pending' to 'approved') */
-  async updateStatus(id: string, status: EventStatus, client?: any): Promise<PublicEvent | null> {
+  async updateStatus(id: string, status: EventStatus, client?: SupabaseClient): Promise<PublicEvent | null> {
     const dbClient = client || supabaseAdmin;
     const { data, error } = await dbClient
       .from("events")

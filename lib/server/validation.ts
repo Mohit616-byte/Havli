@@ -5,7 +5,7 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
-type Rule = (value: unknown) => string | null;
+export type Rule = (value: unknown) => string | null;
 
 function check(
   fields: Record<string, unknown>,

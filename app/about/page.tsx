@@ -105,7 +105,7 @@ export default function AboutPage() {
             How it works
           </h2>
           <div className="space-y-4">
-            {HOW_IT_WORKS.map((step, i) => (
+            {HOW_IT_WORKS.map((step) => (
               <div
                 key={step.step}
                 className="flex gap-5 items-start bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6"
