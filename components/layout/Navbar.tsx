@@ -22,6 +22,9 @@ export default function Navbar() {
         ...(profile?.role === "host" || profile?.role === "admin"
           ? [{ href: "/host/dashboard", label: "Dashboard" }]
           : []),
+        ...(profile?.role === "admin"
+          ? [{ href: "/admin", label: "Admin" }]
+          : []),
         { href: "/profile",         label: "Profile" },
       ]
     : [{ href: "/explore", label: "Explore" }];

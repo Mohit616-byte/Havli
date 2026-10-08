@@ -5,6 +5,7 @@
 
 import { createClient, type User } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/server/supabase";
+import { isConfiguredAdminEmail } from "@/lib/server/admin";
 import type {
   UserProfile,
   UpdateProfileInput,
@@ -30,10 +31,14 @@ function getUserClient(token: string) {
 }
 
 function formatProfile(row: Record<string, unknown>): UserProfile {
+  const email = String(row.email || "");
+  const dbRole = (row.role as UserRole) || "user";
+  const role: UserRole = isConfiguredAdminEmail(email) ? "admin" : dbRole;
+
   return {
     id: String(row.id),
     name: String(row.name || ""),
-    email: String(row.email || ""),
+    email,
     phone: row.phone ? String(row.phone) : undefined,
     gender: row.gender ? String(row.gender) : undefined,
     city: row.city ? String(row.city) : undefined,
@@ -44,7 +49,7 @@ function formatProfile(row: Record<string, unknown>): UserProfile {
     interests: Array.isArray(row.interests)
       ? (row.interests as string[]).map(String)
       : [],
-    role: (row.role as UserRole) || "user",
+    role,
     createdAt: String(row.created_at || new Date().toISOString()),
     updatedAt: String(row.updated_at || new Date().toISOString()),
   };
@@ -59,7 +64,17 @@ export const profileRepository = {
       .eq("id", userId)
       .maybeSingle();
 
-    if (data) return formatProfile(data);
+    if (data) {
+      // If configured as admin email but DB is still 'user', sync DB in background
+      if (isConfiguredAdminEmail(data.email) && data.role !== "admin") {
+        supabaseAdmin
+          .from("profiles")
+          .update({ role: "admin" })
+          .eq("id", userId)
+          .then();
+      }
+      return formatProfile(data);
+    }
 
     // Auto-recovery: If profile row is missing, try to backfill from auth user via admin API
     try {
@@ -71,11 +86,12 @@ export const profileRepository = {
 
       if (u && (u.id === userId || String(u.id) === String(userId))) {
         const name = u.user_metadata?.name || (u.email ? u.email.split("@")[0] : "User");
+        const role = isConfiguredAdminEmail(u.email) ? "admin" : "user";
         const payload = {
           id: u.id,
           email: u.email,
           name,
-          role: "user",
+          role,
         };
         const { data: createdProfile } = await supabaseAdmin
           .from("profiles")
@@ -108,12 +124,18 @@ export const profileRepository = {
   ): Promise<UserProfile> {
     const current = await this.getById(userId, authUser);
 
-    // Build base payload — always include id, email, name, and role='user' for INSERT path
+    const email = current?.email || authUser?.email || "";
+    const role: UserRole = isConfiguredAdminEmail(email)
+      ? "admin"
+      : current?.role ?? "user";
+
+    // Build base payload — always include id, email, name, and role for INSERT path
     const payload: Record<string, unknown> = {
       id: userId,
-      role: current?.role ?? "user", // preserve existing role; default 'user' for new rows
+      role,
       updated_at: new Date().toISOString(),
     };
+
 
     if (current) {
       payload.email = current.email;

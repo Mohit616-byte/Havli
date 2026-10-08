@@ -4,6 +4,7 @@ import { profileRepository } from "@/lib/server/repositories/profile.repository"
 import { submissionRepository } from "@/lib/server/repositories/submission.repository";
 import { eventRepository } from "@/lib/server/repositories/event.repository";
 import { ok, badRequest, serverError } from "@/lib/server/response";
+import { isConfiguredAdminEmail } from "@/lib/server/admin";
 
 /** GET /api/admin/events — List pending host submissions for admin review */
 export async function GET(request: NextRequest) {
@@ -16,8 +17,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const profile = await profileRepository.getById(user.id);
-    if (!profile || profile.role !== "admin") {
+    const profile = await profileRepository.getById(user.id, user);
+    const isAdmin =
+      profile?.role === "admin" ||
+      isConfiguredAdminEmail(user.email) ||
+      isConfiguredAdminEmail(profile?.email);
+
+    if (!isAdmin) {
       return Response.json(
         { success: false, error: { code: "FORBIDDEN", message: "Admin authorization required." } },
         { status: 403 }
@@ -43,8 +49,13 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const profile = await profileRepository.getById(user.id);
-    if (!profile || profile.role !== "admin") {
+    const profile = await profileRepository.getById(user.id, user);
+    const isAdmin =
+      profile?.role === "admin" ||
+      isConfiguredAdminEmail(user.email) ||
+      isConfiguredAdminEmail(profile?.email);
+
+    if (!isAdmin) {
       return Response.json(
         { success: false, error: { code: "FORBIDDEN", message: "Admin authorization required." } },
         { status: 403 }

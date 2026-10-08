@@ -7,6 +7,7 @@ import { createBrowserClient } from "@/lib/supabase/client";
 import { isProfileComplete } from "@/lib/utils/profile";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { RefreshCw } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -17,21 +18,37 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUnconfirmed, setIsUnconfirmed] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setIsUnconfirmed(false);
+    setResendStatus(null);
 
     try {
       const supabase = createBrowserClient();
+      const normalizedEmail = email.trim().toLowerCase();
+
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
       if (authError) {
-        if (authError.message.includes("Invalid login credentials")) {
+        if (
+          authError.message.toLowerCase().includes("email not confirmed") ||
+          authError.message.toLowerCase().includes("email_not_confirmed")
+        ) {
+          setIsUnconfirmed(true);
+          setError("Please verify your email address before logging in.");
+        } else if (authError.message.includes("Invalid login credentials")) {
           setError("Invalid email or password.");
         } else {
           setError(authError.message);
@@ -68,6 +85,52 @@ function LoginForm() {
     }
   };
 
+  const handleResendConfirmation = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setError("Please enter your email address to resend confirmation.");
+      return;
+    }
+
+    setResending(true);
+    setResendStatus(null);
+
+    try {
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_BASE_URL || "https://havli.vercel.app";
+
+      const supabase = createBrowserClient();
+      const { error: resendErr } = await supabase.auth.resend({
+        type: "signup",
+        email: trimmedEmail,
+        options: {
+          emailRedirectTo: `${origin}/auth/confirm`,
+        },
+      });
+
+      if (resendErr) {
+        setResendStatus({
+          success: false,
+          message: resendErr.message,
+        });
+      } else {
+        setResendStatus({
+          success: true,
+          message: "Confirmation link sent! Please check your inbox.",
+        });
+      }
+    } catch {
+      setResendStatus({
+        success: false,
+        message: "Failed to resend confirmation email. Please try again.",
+      });
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-md bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 sm:p-8 space-y-6">
       <div className="text-center">
@@ -91,10 +154,44 @@ function LoginForm() {
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-          <p className="text-sm text-red-400">{error}</p>
+      {isUnconfirmed ? (
+        <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-4 text-left space-y-3">
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-amber-300">
+              Email verification required
+            </p>
+            <p className="text-xs text-amber-300/90 leading-relaxed">
+              Your account has not been verified yet. Please check your inbox for the confirmation link sent to{" "}
+              <strong className="text-amber-200 font-semibold">{email}</strong>.
+            </p>
+          </div>
+
+          {resendStatus && (
+            <p
+              className={`text-xs font-semibold ${
+                resendStatus.success ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              {resendStatus.message}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleResendConfirmation}
+            disabled={resending}
+            className="text-xs font-semibold text-[var(--color-primary)] hover:underline inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={resending ? "animate-spin" : ""} />
+            {resending ? "Sending confirmation link..." : "Resend confirmation email"}
+          </button>
         </div>
+      ) : (
+        error && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )
       )}
 
       <form onSubmit={handleLogin} className="space-y-4">
@@ -104,7 +201,11 @@ function LoginForm() {
           type="email"
           placeholder="you@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setIsUnconfirmed(false);
+            setResendStatus(null);
+          }}
           required
         />
 
